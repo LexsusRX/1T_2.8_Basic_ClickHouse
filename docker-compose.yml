@@ -1,0 +1,49 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:latest
+    restart: always
+    env_file:
+        - ./datapostgress.env
+    container_name: postgres
+    networks:
+      - clickhouse
+    ports:
+      - 5434:5432
+    volumes:
+      - ./db/ddl/Create_script.sql:/docker-entrypoint-initdb.d/Create_script.sql
+      - ./db/dml/insert_script.sql:/docker-entrypoint-initdb.d/insert_script.sql
+      - ./db/dml/Vitrina_Postgress.sql:/docker-entrypoint-initdb.d/Vitrina_Postgress.sql
+      - ./data:/var/lib/postgresql/data
+      
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    networks:
+        - clickhouse
+    container_name: clickhouse
+    depends_on:
+      - postgres
+    ulimits:
+        nofile:
+          soft: 262144
+          hard: 262144 
+    ports:  
+      - "8123:8123"
+    volumes:
+      - ./db/ClickHouse/Create_skripts_ClickHouse.sql:/docker-entrypoint-initdb.d/Create_skripts_ClickHouse.sql
+      - ./clickhouse:/var/lib/clickhouse
+
+  click-ui:
+    image: spoonest/clickhouse-tabix-web-client
+    networks:
+        - clickhouse
+    container_name: click_ui
+    depends_on:
+      - clickhouse
+    ports:
+      - "8124:80"
+    restart: always
+volumes:
+  clickhouse-data:
+networks:
+    clickhouse:
